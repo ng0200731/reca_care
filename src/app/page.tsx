@@ -36,26 +36,49 @@ function generateSvgString(
 </svg>`;
 }
 
-function generateEpsString(
-  widthMm: number,
-  heightMm: number,
-  orientation: "portrait" | "landscape",
+type PaddingValues = {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+};
+
+function drawEpsPadding(
+  w: number,
+  h: number,
+  pad: PaddingValues,
+  offsetX: number,
+  offsetY: number,
+  regionW: number,
+  regionH: number
+): string {
+  if (pad.top + pad.bottom >= regionH || pad.left + pad.right >= regionW) return "";
+  const x = offsetX + pad.left;
+  const y = offsetY + pad.bottom;
+  const rw = regionW - pad.left - pad.right;
+  const rh = regionH - pad.top - pad.bottom;
+  return `% Padding rectangle
+0.1333 0.7725 0.3686 setrgbcolor
+0.3 setlinewidth
+[2 2] 0 setdash
+newpath ${x} ${y} moveto ${x + rw} ${y} lineto ${x + rw} ${y + rh} lineto ${x} ${y + rh} lineto closepath stroke
+[] 0 setdash
+`;
+}
+
+function generateEpsPanel(
+  w: number,
+  h: number,
   isFront: boolean,
   foldOrientation?: string,
-  foldDistanceMm?: number
+  foldDistanceMm?: number,
+  padding?: PaddingValues,
+  paddingRegion2?: PaddingValues
 ): string {
-  const w = orientation === "portrait" ? widthMm : heightMm;
-  const h = orientation === "portrait" ? heightMm : widthMm;
-  const mmToPt = 72 / 25.4;
-  const pw = w * mmToPt;
-  const ph = h * mmToPt;
-
   const centerText = (x: number, y: number, text: string, size: number) =>
     `/Helvetica findfont ${size} scalefont setfont\n${x} ${y} moveto\n(${text}) dup stringwidth pop 2 div neg 0 rmoveto\nshow`;
 
-  let body = `% Scale so 1 user unit = 1 mm
-72 25.4 div 72 25.4 div scale
-% Label outline
+  let body = `% Label outline
 0 0 0 setrgbcolor
 0.3 setlinewidth
 newpath 0 0 moveto ${w} 0 lineto ${w} ${h} lineto 0 ${h} lineto closepath stroke
@@ -77,18 +100,55 @@ ${centerText(w / 2, h / 2, "BACK SIDE", 4)}
   if (foldOrientation === "vertical" && foldDistanceMm != null) {
     body += `% Vertical fold line
 1 0 0 setrgbcolor
+0.3 setlinewidth
 [2 2] 0 setdash
 newpath ${foldDistanceMm} 0 moveto ${foldDistanceMm} ${h} lineto stroke
 [] 0 setdash
 `;
+    if (padding) {
+      body += drawEpsPadding(w, h, padding, 0, 0, foldDistanceMm, h);
+      const r2Pad = paddingRegion2 ?? { top: 0, right: 0, bottom: 0, left: 0 };
+      body += drawEpsPadding(w, h, r2Pad, foldDistanceMm, 0, w - foldDistanceMm, h);
+    }
   } else if (foldOrientation === "horizontal" && foldDistanceMm != null) {
     body += `% Horizontal fold line
 1 0 0 setrgbcolor
+0.3 setlinewidth
 [2 2] 0 setdash
 newpath 0 ${foldDistanceMm} moveto ${w} ${foldDistanceMm} lineto stroke
 [] 0 setdash
 `;
+    if (padding) {
+      body += drawEpsPadding(w, h, padding, 0, 0, w, foldDistanceMm);
+      const r2Pad = paddingRegion2 ?? { top: 0, right: 0, bottom: 0, left: 0 };
+      body += drawEpsPadding(w, h, r2Pad, 0, foldDistanceMm, w, h - foldDistanceMm);
+    }
+  } else if (padding) {
+    body += drawEpsPadding(w, h, padding, 0, 0, w, h);
   }
+
+  return body;
+}
+
+function generateCombinedEpsString(
+  widthMm: number,
+  heightMm: number,
+  orientation: "portrait" | "landscape",
+  foldOrientation?: string,
+  foldDistanceMm?: number,
+  padding?: PaddingValues,
+  paddingRegion2?: PaddingValues
+): string {
+  const w = orientation === "portrait" ? widthMm : heightMm;
+  const h = orientation === "portrait" ? heightMm : widthMm;
+  const gapMm = 10;
+  const totalW = w * 2 + gapMm;
+  const mmToPt = 72 / 25.4;
+  const pw = totalW * mmToPt;
+  const ph = h * mmToPt;
+
+  const frontPanel = generateEpsPanel(w, h, true, foldOrientation, foldDistanceMm, padding, paddingRegion2);
+  const backPanel = generateEpsPanel(w, h, false, foldOrientation, foldDistanceMm, padding, paddingRegion2);
 
   return `%!PS-Adobe-3.0 EPSF-3.0
 %%BoundingBox: 0 0 ${Math.ceil(pw)} ${Math.ceil(ph)}
@@ -99,7 +159,11 @@ newpath 0 ${foldDistanceMm} moveto ${w} ${foldDistanceMm} lineto stroke
 %%EndProlog
 %%Page: 1 1
 gsave
-${body}grestore
+72 25.4 div 72 25.4 div scale
+% Front panel
+${frontPanel}% Back panel
+${w + gapMm} 0 translate
+${backPanel}grestore
 showpage
 %%EOF`;
 }
@@ -232,19 +296,22 @@ export default function Home() {
       if (format === "svg") {
         downloadBlob(svgFront, `${baseName}.svg`, "image/svg+xml");
       } else if (format === "ai") {
-        const epsFront = generateEpsString(
-          data.widthMm,
-          data.heightMm,
-          data.orientation,
-          true,
-          data.loopFoldOrientation,
+        const foldDistance =
           data.loopMidForm && data.loopFoldOrientation
             ? Math.round(
                 (data.loopFoldOrientation === "vertical" ? data.widthMm : data.heightMm) / 2
               )
-            : data.loopFoldDistanceMm
+            : data.loopFoldDistanceMm;
+        const epsBoth = generateCombinedEpsString(
+          data.widthMm,
+          data.heightMm,
+          data.orientation,
+          data.loopFoldOrientation,
+          foldDistance,
+          data.padding,
+          data.paddingRegion2
         );
-        downloadBlob(epsFront, `${baseName}.ai`, "application/postscript");
+        downloadBlob(epsBoth, `${baseName}.ai`, "application/postscript");
       } else if (format === "pdf") {
         const { jsPDF } = await import("jspdf");
         const w = data.orientation === "portrait" ? data.widthMm : data.heightMm;
