@@ -17,6 +17,13 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
 
+    if (!body.name?.trim()) {
+      return NextResponse.json({ error: "Layout name is required" }, { status: 400 });
+    }
+    if (!body.materialId) {
+      return NextResponse.json({ error: "Material is required" }, { status: 400 });
+    }
+
     const layout = await prisma.layout.create({
       data: {
         name: body.name,
@@ -50,6 +57,9 @@ export async function POST(request: Request) {
     return NextResponse.json(layout, { status: 201 });
   } catch (e) {
     console.error(e);
+    if (e && typeof e === "object" && "code" in e && e.code === "P2002") {
+      return NextResponse.json({ error: "A layout with this name already exists" }, { status: 409 });
+    }
     return NextResponse.json({ error: "Failed to save layout" }, { status: 500 });
   }
 }

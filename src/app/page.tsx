@@ -3,6 +3,12 @@
 import { useEffect, useCallback, useState } from "react";
 import LeftMenu from "@/components/LeftMenu";
 import StepRenderer from "@/components/StepRenderer";
+import CustomerCreate from "@/components/modules/CustomerCreate";
+import CustomerView from "@/components/modules/CustomerView";
+import TranslationCreate from "@/components/modules/TranslationCreate";
+import TranslationView from "@/components/modules/TranslationView";
+import FontCreate from "@/components/modules/FontCreate";
+import FontView from "@/components/modules/FontView";
 import { useLayoutStore } from "@/store/layoutStore";
 
 function generateSvgString(
@@ -134,6 +140,7 @@ function generateCombinedEpsString(
   widthMm: number,
   heightMm: number,
   orientation: "portrait" | "landscape",
+  viewMode: "side-by-side" | "top-bottom",
   foldOrientation?: string,
   foldDistanceMm?: number,
   padding?: PaddingValues,
@@ -142,13 +149,19 @@ function generateCombinedEpsString(
   const w = orientation === "portrait" ? widthMm : heightMm;
   const h = orientation === "portrait" ? heightMm : widthMm;
   const gapMm = 10;
-  const totalW = w * 2 + gapMm;
+  const isSideBySide = viewMode === "side-by-side";
+  const totalW = isSideBySide ? w * 2 + gapMm : w;
+  const totalH = isSideBySide ? h : h * 2 + gapMm;
   const mmToPt = 72 / 25.4;
   const pw = totalW * mmToPt;
-  const ph = h * mmToPt;
+  const ph = totalH * mmToPt;
 
   const frontPanel = generateEpsPanel(w, h, true, foldOrientation, foldDistanceMm, padding, paddingRegion2);
   const backPanel = generateEpsPanel(w, h, false, foldOrientation, foldDistanceMm, padding, paddingRegion2);
+
+  const backTranslate = isSideBySide
+    ? `${w + gapMm} 0 translate`
+    : `0 ${h + gapMm} translate`;
 
   return `%!PS-Adobe-3.0 EPSF-3.0
 %%BoundingBox: 0 0 ${Math.ceil(pw)} ${Math.ceil(ph)}
@@ -162,7 +175,7 @@ gsave
 72 25.4 div 72 25.4 div scale
 % Front panel
 ${frontPanel}% Back panel
-${w + gapMm} 0 translate
+${backTranslate}
 ${backPanel}grestore
 showpage
 %%EOF`;
@@ -191,6 +204,7 @@ export default function Home() {
   const setViewPanel = useLayoutStore((s) => s.setViewPanel);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState("");
+  const [editingLayout, setEditingLayout] = useState<{ id: string; name: string } | null>(null);
 
   const fetchLayouts = useCallback(async () => {
     try {
@@ -255,8 +269,50 @@ export default function Home() {
     [loadLayout, setStep, setViewPanel]
   );
 
+  const handleUpdateLayoutName = useCallback(async () => {
+    if (!editingLayout) return;
+    const name = editingLayout.name.trim();
+    if (!name) return;
+    try {
+      const res = await fetch(`/api/layouts/${editingLayout.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      if (!res.ok) throw new Error("Failed to update");
+      setSavedLayouts(
+        savedLayouts.map((l) => (l.id === editingLayout.id ? { ...l, name } : l))
+      );
+      setEditingLayout(null);
+    } catch {
+      setLoadError("Failed to update layout name");
+    }
+  }, [editingLayout, savedLayouts, setSavedLayouts]);
+
+  const handleDeleteLayout = useCallback(
+    async (id: string) => {
+      if (!confirm("Delete this layout?")) return;
+      try {
+        const res = await fetch(`/api/layouts/${id}`, { method: "DELETE" });
+        if (!res.ok) throw new Error("Failed to delete");
+        setSavedLayouts(savedLayouts.filter((l) => l.id !== id));
+      } catch {
+        setLoadError("Failed to delete layout");
+      }
+    },
+    [savedLayouts, setSavedLayouts]
+  );
+
   const handleSave = useCallback(async () => {
-    const name = data.name.trim() || prompt("Enter layout name:");
+    if (!data.materialId) {
+      alert("Please select a material before saving.");
+      return;
+    }
+
+    let name = data.name.trim();
+    if (!name) {
+      name = (prompt("Enter layout name:") || "").trim();
+    }
     if (!name) return;
 
     const payload = { ...data, name };
@@ -271,6 +327,8 @@ export default function Home() {
       const saved = await res.json();
       const current = useLayoutStore.getState().savedLayouts;
       setSavedLayouts([...current, { id: saved.id, name: saved.name }]);
+    } else if (res.status === 409) {
+      alert("A layout with this name already exists. Please use a different name.");
     } else {
       const err = await res.json().catch(() => ({}));
       alert(err.error || "Failed to save layout");
@@ -306,6 +364,7 @@ export default function Home() {
           data.widthMm,
           data.heightMm,
           data.orientation,
+          data.viewMode,
           data.loopFoldOrientation,
           foldDistance,
           data.padding,
@@ -378,7 +437,7 @@ export default function Home() {
             <p className="text-[10px] text-[var(--foreground)]/50">Design Studio</p>
           </div>
         </header>
-        {viewPanel === "layout-create" ? (
+        {viewPanel === "layout-create" && (
           <div className="max-w-3xl mx-auto p-6 lg:p-10">
             <StepRenderer />
 
@@ -423,7 +482,9 @@ export default function Home() {
               )}
             </div>
           </div>
-        ) : (
+        )}
+
+        {viewPanel === "layout-view" && (
           <div className="max-w-3xl mx-auto p-6 lg:p-10">
             <div className="mb-6">
               <h2 className="text-2xl font-semibold text-[var(--foreground)]">Saved Layouts</h2>
@@ -467,15 +528,57 @@ export default function Home() {
                         {l.name}
                       </span>
                     </div>
-                    <button
-                      onClick={() => handleLoad(l.id)}
-                      disabled={loading}
-                      className="px-4 py-2 bg-[var(--primary)] text-white rounded-lg text-xs font-semibold hover:bg-[var(--primary)]/90 disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98] transition-all duration-200 cursor-pointer shrink-0"
-                    >
-                      {loading ? "Loading..." : "Open"}
-                    </button>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        onClick={() => handleLoad(l.id)}
+                        disabled={loading}
+                        className="px-4 py-2 bg-[var(--primary)] text-white rounded-lg text-xs font-semibold hover:bg-[var(--primary)]/90 disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98] transition-all duration-200 cursor-pointer"
+                      >
+                        {loading ? "Loading..." : "Open"}
+                      </button>
+                      <button
+                        onClick={() => setEditingLayout({ id: l.id, name: l.name })}
+                        className="px-3 py-2 border border-[var(--border)] text-[var(--foreground)]/70 rounded-lg text-xs font-medium hover:bg-[var(--muted)] transition-colors cursor-pointer"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeleteLayout(l.id)}
+                        className="px-3 py-2 border border-red-200 text-[var(--destructive)] rounded-lg text-xs font-medium hover:bg-red-50 transition-colors cursor-pointer"
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </div>
                 ))}
+              </div>
+            )}
+
+            {editingLayout && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+                <div className="bg-white rounded-xl shadow-[var(--shadow-xl)] w-full max-w-md p-6">
+                  <h3 className="text-lg font-semibold text-[var(--foreground)] mb-4">Edit Layout Name</h3>
+                  <input
+                    type="text"
+                    value={editingLayout.name}
+                    onChange={(e) => setEditingLayout({ ...editingLayout, name: e.target.value })}
+                    className="w-full px-3.5 py-2 border border-[var(--border)] rounded-lg text-sm bg-white text-[var(--foreground)] focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20 outline-none"
+                  />
+                  <div className="flex justify-end gap-3 mt-6">
+                    <button
+                      onClick={() => setEditingLayout(null)}
+                      className="px-4 py-2 border border-[var(--border)] text-[var(--foreground)]/70 rounded-lg text-sm font-medium hover:bg-[var(--muted)] transition-colors cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleUpdateLayoutName}
+                      className="px-5 py-2 bg-[var(--primary)] text-white rounded-lg text-sm font-semibold hover:bg-[var(--primary)]/90 transition-all cursor-pointer"
+                    >
+                      Save
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -487,6 +590,13 @@ export default function Home() {
             </button>
           </div>
         )}
+
+        {viewPanel === "customer-create" && <CustomerCreate />}
+        {viewPanel === "customer-view" && <CustomerView />}
+        {viewPanel === "translation-create" && <TranslationCreate />}
+        {viewPanel === "translation-view" && <TranslationView />}
+        {viewPanel === "font-create" && <FontCreate />}
+        {viewPanel === "font-view" && <FontView />}
       </main>
     </div>
   );

@@ -18,6 +18,75 @@ model Material {
   @@map("materials")
 }
 
+model Customer {
+  id           String   @id @default(uuid())
+  customerCode String   @unique @default(uuid()) @map("customer_code")
+  companyName  String   @map("company_name")
+  emailDomain  String?  @map("email_domain")
+  companyType  String?  @map("company_type")
+  address      String?
+  notes        String?
+  createdAt         DateTime           @default(now()) @map("created_at")
+  updatedAt         DateTime           @updatedAt @map("updated_at")
+  members           Member[]
+  translationTables TranslationTable[]
+  fonts             FontFamily[]
+
+  @@map("customers")
+}
+
+model Member {
+  id         String   @id @default(uuid())
+  customerId String   @map("customer_id")
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  name       String
+  title      String?
+  email      String?
+  phone      String?
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@map("members")
+}
+
+model TranslationTable {
+  id         String              @id @default(uuid())
+  name       String              @map("table_name")
+  customerId String?             @map("customer_id")
+  customer   Customer?           @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  headers    String
+  entries    TranslationEntry[]
+  createdAt  DateTime            @default(now()) @map("created_at")
+  updatedAt  DateTime            @updatedAt @map("updated_at")
+
+  @@map("translation_tables")
+}
+
+model TranslationEntry {
+  id                 String           @id @default(uuid())
+  translationTableId String           @map("translation_table_id")
+  translationTable   TranslationTable @relation(fields: [translationTableId], references: [id], onDelete: Cascade)
+  rowIndex           Int              @map("row_index")
+  values             String
+  createdAt          DateTime         @default(now()) @map("created_at")
+  updatedAt          DateTime         @updatedAt @map("updated_at")
+
+  @@map("translation_entries")
+}
+
+model FontFamily {
+  id         String    @id @default(uuid())
+  name       String    @map("font_name")
+  fileName   String    @map("file_name")
+  filePath   String    @map("file_path")
+  customerId String?   @map("customer_id")
+  customer   Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  @@map("font_families")
+}
+
 model Layout {
   id        String          @id @default(uuid())
   name      String          @unique

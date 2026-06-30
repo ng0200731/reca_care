@@ -6,7 +6,6 @@
 - Local:         http://localhost:3000
 - Network:       http://192.168.0.165:3000
 - Environments: .env
-✓ Ready in 447ms
+✓ Ready in 575ms
 
- GET / 200 in 338ms (next.js: 175ms, application-code: 164ms)
-[?25h
+ POST /api/layouts 201 in 803ms (next.js: 518ms, application-code: 285ms)

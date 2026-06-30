@@ -28,57 +28,76 @@ export async function PUT(
     const { id } = await params;
     const body = await request.json();
 
-    const layout = await prisma.layout.update({
-      where: { id },
-      data: {
-        name: body.name,
-        details: {
-          upsert: {
-            create: {
-              materialId: body.materialId,
-              widthMm: body.widthMm,
-              heightMm: body.heightMm,
-              orientation: body.orientation,
-              cuttingType: body.cuttingType,
-              loopFoldOrientation: body.loopFoldOrientation ?? null,
-              loopMidForm: body.loopMidForm ?? null,
-              loopFoldDistanceMm: body.loopFoldDistanceMm ?? null,
-              paddingOption: body.paddingOption,
-              paddingTop: body.padding.top,
-              paddingRight: body.padding.right,
-              paddingBottom: body.padding.bottom,
-              paddingLeft: body.padding.left,
+    const data: any = {};
+    if (body.name !== undefined) data.name = body.name;
+
+    const hasDetails =
+      body.materialId !== undefined ||
+      body.widthMm !== undefined ||
+      body.heightMm !== undefined ||
+      body.orientation !== undefined ||
+      body.cuttingType !== undefined ||
+      body.loopFoldOrientation !== undefined ||
+      body.loopMidForm !== undefined ||
+      body.loopFoldDistanceMm !== undefined ||
+      body.paddingOption !== undefined ||
+      body.padding !== undefined ||
+      body.paddingRegion2 !== undefined ||
+      body.paddingSyncRegions !== undefined ||
+      body.viewMode !== undefined;
+
+    if (hasDetails) {
+      data.details = {
+        upsert: {
+          create: {
+            materialId: body.materialId,
+            widthMm: body.widthMm,
+            heightMm: body.heightMm,
+            orientation: body.orientation,
+            cuttingType: body.cuttingType,
+            loopFoldOrientation: body.loopFoldOrientation ?? null,
+            loopMidForm: body.loopMidForm ?? null,
+            loopFoldDistanceMm: body.loopFoldDistanceMm ?? null,
+            paddingOption: body.paddingOption,
+            paddingTop: body.padding?.top,
+            paddingRight: body.padding?.right,
+            paddingBottom: body.padding?.bottom,
+            paddingLeft: body.padding?.left,
             paddingR2Top: body.paddingRegion2?.top ?? 0,
             paddingR2Right: body.paddingRegion2?.right ?? 0,
             paddingR2Bottom: body.paddingRegion2?.bottom ?? 0,
             paddingR2Left: body.paddingRegion2?.left ?? 0,
             paddingSyncRegions: body.paddingSyncRegions ?? null,
             viewMode: body.viewMode ?? "side-by-side",
-            },
-            update: {
-              materialId: body.materialId,
-              widthMm: body.widthMm,
-              heightMm: body.heightMm,
-              orientation: body.orientation,
-              cuttingType: body.cuttingType,
-              loopFoldOrientation: body.loopFoldOrientation ?? null,
-              loopMidForm: body.loopMidForm ?? null,
-              loopFoldDistanceMm: body.loopFoldDistanceMm ?? null,
-              paddingOption: body.paddingOption,
-              paddingTop: body.padding.top,
-              paddingRight: body.padding.right,
-              paddingBottom: body.padding.bottom,
-              paddingLeft: body.padding.left,
-              paddingR2Top: body.paddingRegion2?.top ?? 0,
-              paddingR2Right: body.paddingRegion2?.right ?? 0,
-              paddingR2Bottom: body.paddingRegion2?.bottom ?? 0,
-              paddingR2Left: body.paddingRegion2?.left ?? 0,
-              paddingSyncRegions: body.paddingSyncRegions ?? null,
-              viewMode: body.viewMode ?? "side-by-side",
-            },
+          },
+          update: {
+            materialId: body.materialId,
+            widthMm: body.widthMm,
+            heightMm: body.heightMm,
+            orientation: body.orientation,
+            cuttingType: body.cuttingType,
+            loopFoldOrientation: body.loopFoldOrientation ?? null,
+            loopMidForm: body.loopMidForm ?? null,
+            loopFoldDistanceMm: body.loopFoldDistanceMm ?? null,
+            paddingOption: body.paddingOption,
+            paddingTop: body.padding?.top,
+            paddingRight: body.padding?.right,
+            paddingBottom: body.padding?.bottom,
+            paddingLeft: body.padding?.left,
+            paddingR2Top: body.paddingRegion2?.top ?? 0,
+            paddingR2Right: body.paddingRegion2?.right ?? 0,
+            paddingR2Bottom: body.paddingRegion2?.bottom ?? 0,
+            paddingR2Left: body.paddingRegion2?.left ?? 0,
+            paddingSyncRegions: body.paddingSyncRegions ?? null,
+            viewMode: body.viewMode ?? "side-by-side",
           },
         },
-      },
+      };
+    }
+
+    const layout = await prisma.layout.update({
+      where: { id },
+      data,
       include: { details: true },
     });
 
