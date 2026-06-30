@@ -117,17 +117,18 @@ newpath ${foldDistanceMm} 0 moveto ${foldDistanceMm} ${h} lineto stroke
       body += drawEpsPadding(w, h, r2Pad, foldDistanceMm, 0, w - foldDistanceMm, h);
     }
   } else if (foldOrientation === "horizontal" && foldDistanceMm != null) {
+    const foldY = h - foldDistanceMm;
     body += `% Horizontal fold line
 1 0 0 setrgbcolor
 0.3 setlinewidth
 [2 2] 0 setdash
-newpath 0 ${foldDistanceMm} moveto ${w} ${foldDistanceMm} lineto stroke
+newpath 0 ${foldY} moveto ${w} ${foldY} lineto stroke
 [] 0 setdash
 `;
     if (padding) {
-      body += drawEpsPadding(w, h, padding, 0, 0, w, foldDistanceMm);
+      body += drawEpsPadding(w, h, padding, 0, foldY, w, foldDistanceMm);
       const r2Pad = paddingRegion2 ?? { top: 0, right: 0, bottom: 0, left: 0 };
-      body += drawEpsPadding(w, h, r2Pad, 0, foldDistanceMm, w, h - foldDistanceMm);
+      body += drawEpsPadding(w, h, r2Pad, 0, 0, w, foldY);
     }
   } else if (padding) {
     body += drawEpsPadding(w, h, padding, 0, 0, w, h);
