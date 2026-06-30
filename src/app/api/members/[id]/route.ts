@@ -1,12 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+async function getIdParam(params: Promise<{ id: string }>) {
+  const { id } = await params;
+  const numericId = parseInt(id, 10);
+  if (isNaN(numericId)) {
+    throw new Error("Invalid id");
+  }
+  return numericId;
+}
+
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
+    const id = await getIdParam(params);
     const body = await request.json();
     const member = await prisma.member.update({
       where: { id },
@@ -29,7 +38,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
+    const id = await getIdParam(params);
     await prisma.member.delete({ where: { id } });
     return NextResponse.json({ success: true });
   } catch (e) {

@@ -50,7 +50,9 @@ export function generateSvgLabel(
   showPadding: boolean = false,
   showFold: boolean = false,
   showDimensions: boolean = false,
-  foldMidForm: boolean = false
+  foldMidForm: boolean = false,
+  isFlipped: boolean = false,
+  labelText?: { isFront: boolean }
 ): string {
   const { w, h } = getDisplayedDimensions(widthMm, heightMm, orientation);
 
@@ -59,23 +61,34 @@ export function generateSvgLabel(
   parts.push(`<?xml version="1.0" encoding="UTF-8"?>`);
   parts.push(`<svg xmlns="http://www.w3.org/2000/svg" width="${w}mm" height="${h}mm" viewBox="0 0 ${w} ${h}">`);
 
-  parts.push(`<rect x="0" y="0" width="${w}" height="${h}" fill="white" stroke="black" stroke-width="0.3"/>`);
+  const content: string[] = [];
+
+  content.push(`<rect x="0" y="0" width="${w}" height="${h}" fill="white" stroke="black" stroke-width="0.3"/>`);
+
+  if (labelText) {
+    if (labelText.isFront) {
+      content.push(`<text x="${w / 2}" y="${h / 2 - 4}" text-anchor="middle" font-size="4" fill="#333">CARE LABEL</text>`);
+      content.push(`<text x="${w / 2}" y="${h / 2 + 4}" text-anchor="middle" font-size="3" fill="#666">FRONT SIDE</text>`);
+    } else {
+      content.push(`<text x="${w / 2}" y="${h / 2}" text-anchor="middle" font-size="4" fill="#333">BACK SIDE</text>`);
+    }
+  }
 
   if (showFold && foldOrientation) {
     const distance = getFoldDistance(foldOrientation, w, h, foldDistanceMm, foldMidForm);
     if (foldOrientation === "vertical") {
       const y2 = foldMidForm ? h / 2 : h;
-      parts.push(`<line x1="${distance}" y1="0" x2="${distance}" y2="${y2}" stroke="#DC2626" stroke-width="0.3" stroke-dasharray="2,2"/>`);
+      content.push(`<line x1="${distance}" y1="0" x2="${distance}" y2="${y2}" stroke="#DC2626" stroke-width="0.3" stroke-dasharray="2,2"/>`);
     } else {
       const x2 = foldMidForm ? w / 2 : w;
-      parts.push(`<line x1="0" y1="${distance}" x2="${x2}" y2="${distance}" stroke="#DC2626" stroke-width="0.3" stroke-dasharray="2,2"/>`);
+      content.push(`<line x1="0" y1="${distance}" x2="${x2}" y2="${distance}" stroke="#DC2626" stroke-width="0.3" stroke-dasharray="2,2"/>`);
     }
   }
 
   if (showPadding && padding) {
     const drawPad = (pad: PaddingValues, offsetX: number = 0, offsetY: number = 0, regionW: number = w, regionH: number = h) => {
       if (pad.top + pad.bottom >= regionH || pad.left + pad.right >= regionW) return;
-      parts.push(`<rect x="${offsetX + pad.left}" y="${offsetY + pad.top}" width="${regionW - pad.left - pad.right}" height="${regionH - pad.top - pad.bottom}" fill="none" stroke="#22c55e" stroke-width="0.3" stroke-dasharray="2,2"/>`);
+      content.push(`<rect x="${offsetX + pad.left}" y="${offsetY + pad.top}" width="${regionW - pad.left - pad.right}" height="${regionH - pad.top - pad.bottom}" fill="none" stroke="#22c55e" stroke-width="0.3" stroke-dasharray="2,2"/>`);
     };
 
     if (foldOrientation) {
@@ -95,12 +108,48 @@ export function generateSvgLabel(
 
   if (showDimensions) {
     const fontSize = 2.5;
-    parts.push(`<text x="${w / 2}" y="${h + 3}" text-anchor="middle" font-size="${fontSize}" fill="#333">${w.toFixed(0)} mm</text>`);
-    parts.push(`<text x="${w + 3}" y="${h / 2}" text-anchor="middle" font-size="${fontSize}" fill="#333" transform="rotate(90,${w + 3},${h / 2})">${h.toFixed(0)} mm</text>`);
+    content.push(`<text x="${w / 2}" y="${h + 3}" text-anchor="middle" font-size="${fontSize}" fill="#333">${w.toFixed(0)} mm</text>`);
+    content.push(`<text x="${w + 3}" y="${h / 2}" text-anchor="middle" font-size="${fontSize}" fill="#333" transform="rotate(90,${w + 3},${h / 2})">${h.toFixed(0)} mm</text>`);
+  }
+
+  if (isFlipped) {
+    parts.push(`<g transform="rotate(180, ${w / 2}, ${h / 2})">`);
+    parts.push(...content);
+    parts.push(`</g>`);
+  } else {
+    parts.push(...content);
   }
 
   parts.push(`</svg>`);
   return parts.join("\n");
+}
+
+const A_SERIES_MM = [
+  { name: "A4", w: 210, h: 297 },
+  { name: "A3", w: 297, h: 420 },
+  { name: "A2", w: 420, h: 594 },
+  { name: "A1", w: 594, h: 841 },
+  { name: "A0", w: 841, h: 1189 },
+];
+
+export function findArtboardSize(
+  reqW: number,
+  reqH: number
+): { w: number; h: number; name: string; orientation: "portrait" | "landscape" } {
+  for (const size of A_SERIES_MM) {
+    if (reqW <= size.w && reqH <= size.h) {
+      return { w: size.w, h: size.h, name: size.name, orientation: "portrait" };
+    }
+    if (reqW <= size.h && reqH <= size.w) {
+      return { w: size.h, h: size.w, name: size.name, orientation: "landscape" };
+    }
+  }
+  return {
+    w: reqW,
+    h: reqH,
+    name: "Custom",
+    orientation: reqW > reqH ? "landscape" : "portrait",
+  };
 }
 
 export function generatePdfLabel(
@@ -223,4 +272,96 @@ export function generateCombinedPdfLabel(
   drawLabelOnPdf(doc, w + gap, 0, w, h, foldOrientation, foldDistanceMm, padding, paddingRegion2, showPadding, showFold, foldMidForm);
 
   return doc.output("arraybuffer") as ArrayBuffer;
+}
+
+export async function generateProductionPdfLabel(
+  widthMm: number,
+  heightMm: number,
+  orientation: "portrait" | "landscape",
+  viewMode: "side-by-side" | "top-bottom",
+  isBackFlipped: boolean,
+  foldOrientation?: "vertical" | "horizontal",
+  foldDistanceMm?: number,
+  padding?: PaddingValues,
+  paddingRegion2?: PaddingValues,
+  showPadding: boolean = true,
+  showFold: boolean = false,
+  foldMidForm: boolean = false
+): Promise<ArrayBuffer> {
+  const { w, h } = getDisplayedDimensions(widthMm, heightMm, orientation);
+  const gapMm = 10;
+  const marginMm = 8;
+  const isSideBySide = viewMode === "side-by-side";
+  const totalW = isSideBySide ? w * 2 + gapMm : w;
+  const totalH = isSideBySide ? h : h * 2 + gapMm;
+
+  const reqW = totalW + marginMm * 2;
+  const reqH = totalH + marginMm * 2;
+  const artboard = findArtboardSize(reqW, reqH);
+
+  const frontSvg = generateSvgLabel(
+    widthMm,
+    heightMm,
+    orientation,
+    foldOrientation,
+    foldDistanceMm,
+    padding,
+    paddingRegion2,
+    showPadding,
+    showFold,
+    true,
+    foldMidForm,
+    false,
+    { isFront: true }
+  );
+
+  const backSvg = generateSvgLabel(
+    widthMm,
+    heightMm,
+    orientation,
+    foldOrientation,
+    foldDistanceMm,
+    padding,
+    paddingRegion2,
+    showPadding,
+    showFold,
+    true,
+    foldMidForm,
+    isBackFlipped,
+    { isFront: false }
+  );
+
+  const combinedSvg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${artboard.w}mm" height="${artboard.h}mm" viewBox="0 0 ${artboard.w} ${artboard.h}">
+  <rect x="0" y="0" width="${artboard.w}" height="${artboard.h}" fill="white"/>
+  <g transform="translate(${marginMm}, ${marginMm})">
+    ${frontSvg.replace(/<[?]xml[^?]*[?]>/, "").replace(/<svg[^>]*>/, "").replace(/<\/svg>/, "")}
+  </g>
+  <g transform="translate(${isSideBySide ? marginMm + w + gapMm : marginMm}, ${isSideBySide ? marginMm : marginMm + h + gapMm})">
+    ${backSvg.replace(/<[?]xml[^?]*[?]>/, "").replace(/<svg[^>]*>/, "").replace(/<\/svg>/, "")}
+  </g>
+</svg>`;
+
+  const doc = new jsPDF({
+    orientation: artboard.orientation,
+    unit: "mm",
+    format: [artboard.w, artboard.h],
+  });
+
+  const svgBlob = new Blob([combinedSvg], { type: "image/svg+xml;charset=utf-8" });
+  const url = URL.createObjectURL(svgBlob);
+
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = reject;
+      image.src = url;
+    });
+
+    doc.addImage(img, "PNG", 0, 0, artboard.w, artboard.h);
+    return doc.output("arraybuffer") as ArrayBuffer;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 }

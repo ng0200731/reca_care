@@ -19,26 +19,31 @@ model Material {
 }
 
 model Customer {
-  id           String   @id @default(uuid())
-  customerCode String   @unique @default(uuid()) @map("customer_code")
-  companyName  String   @map("company_name")
-  emailDomain  String?  @map("email_domain")
-  companyType  String?  @map("company_type")
-  address      String?
-  notes        String?
-  createdAt         DateTime           @default(now()) @map("created_at")
-  updatedAt         DateTime           @updatedAt @map("updated_at")
-  members           Member[]
-  translationTables TranslationTable[]
-  fonts             FontFamily[]
+  id          Int      @id @default(autoincrement())
+  customerId  String   @unique @map("customer_id")
+  companyName String   @map("company_name")
+  emailDomain String   @map("email_domain")
+  email       String?
+  phone       String?
+  address     String?
+  notes       String?
+  companyType String?  @map("company_type")
+  memberName  String?  @map("member_name")
+  memberTitle String?  @map("member_title")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  members     Member[]
+  translations TranslationTable[]
+  fonts       FontFamily[]
 
   @@map("customers")
 }
 
 model Member {
-  id         String   @id @default(uuid())
+  id         Int      @id @default(autoincrement())
+  memberId   String   @unique @map("member_id")
   customerId String   @map("customer_id")
-  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customer   Customer @relation(fields: [customerId], references: [customerId], onDelete: Cascade)
   name       String
   title      String?
   email      String?
@@ -50,41 +55,27 @@ model Member {
 }
 
 model TranslationTable {
-  id         String              @id @default(uuid())
-  name       String              @map("table_name")
-  customerId String?             @map("customer_id")
-  customer   Customer?           @relation(fields: [customerId], references: [id], onDelete: SetNull)
-  headers    String
-  entries    TranslationEntry[]
-  createdAt  DateTime            @default(now()) @map("created_at")
-  updatedAt  DateTime            @updatedAt @map("updated_at")
-
-  @@map("translation_tables")
-}
-
-model TranslationEntry {
-  id                 String           @id @default(uuid())
-  translationTableId String           @map("translation_table_id")
-  translationTable   TranslationTable @relation(fields: [translationTableId], references: [id], onDelete: Cascade)
-  rowIndex           Int              @map("row_index")
-  values             String
-  createdAt          DateTime         @default(now()) @map("created_at")
-  updatedAt          DateTime         @updatedAt @map("updated_at")
-
-  @@map("translation_entries")
-}
-
-model FontFamily {
-  id         String    @id @default(uuid())
-  name       String    @map("font_name")
-  fileName   String    @map("file_name")
-  filePath   String    @map("file_path")
+  id         Int       @id @default(autoincrement())
+  name       String    @map("table_name")
   customerId String?   @map("customer_id")
-  customer   Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  customer   Customer? @relation(fields: [customerId], references: [customerId], onDelete: SetNull)
+  data       String
   createdAt  DateTime  @default(now()) @map("created_at")
   updatedAt  DateTime  @updatedAt @map("updated_at")
 
-  @@map("font_families")
+  @@map("translations")
+}
+
+model FontFamily {
+  id         Int       @id @default(autoincrement())
+  name       String    @map("font_name")
+  fileName   String    @map("filename")
+  filePath   String    @map("file_path")
+  customerId String?   @map("customer_id")
+  customer   Customer? @relation(fields: [customerId], references: [customerId], onDelete: SetNull)
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  @@map("fonts")
 }
 
 model Layout {
@@ -121,6 +112,7 @@ model LayoutDetail {
   paddingR2Left       Float    @default(0) @map("padding_r2_left")
   paddingSyncRegions  Boolean? @map("padding_sync_regions")
   viewMode            String   @default("side-by-side") @map("view_mode")
+  isBackFlipped       Boolean? @map("is_back_flipped")
   createdAt           DateTime @default(now()) @map("created_at")
   updatedAt           DateTime @updatedAt @map("updated_at")
 

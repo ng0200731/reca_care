@@ -16,7 +16,7 @@ export default function CustomerCreate() {
   const [companyType, setCompanyType] = useState("");
   const [address, setAddress] = useState("");
   const [notes, setNotes] = useState("");
-  const [customerId, setCustomerId] = useState<string | null>(null);
+  const [customerId, setCustomerId] = useState<number | null>(null);
   const [members, setMembers] = useState<MemberInput[]>([]);
   const [memberName, setMemberName] = useState("");
   const [memberTitle, setMemberTitle] = useState("");
@@ -64,6 +64,10 @@ export default function CustomerCreate() {
   const saveCompany = async () => {
     if (!companyName.trim()) {
       setMessage("Company name is required");
+      return;
+    }
+    if (!emailDomain.trim()) {
+      setMessage("Email domain is required");
       return;
     }
     setLoading(true);

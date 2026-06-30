@@ -43,6 +43,7 @@ type LayoutStore = {
   setPaddingRegion2: (p: PaddingValues) => void;
   setPaddingSyncRegions: (v: boolean) => void;
   setViewMode: (m: ViewMode) => void;
+  setIsBackFlipped: (v: boolean) => void;
   setLayoutName: (name: string) => void;
   loadLayout: (data: LayoutData) => void;
   reset: () => void;
@@ -59,6 +60,7 @@ const initialData: LayoutData = {
   paddingOption: "same",
   padding: { ...defaultPadding },
   viewMode: "side-by-side",
+  isBackFlipped: false,
 };
 
 export const useLayoutStore = create<LayoutStore>((set) => ({
@@ -125,6 +127,8 @@ export const useLayoutStore = create<LayoutStore>((set) => ({
     })),
   setViewMode: (viewMode) =>
     set((s) => ({ data: { ...s.data, viewMode }, isDirty: true })),
+  setIsBackFlipped: (isBackFlipped) =>
+    set((s) => ({ data: { ...s.data, isBackFlipped }, isDirty: true })),
   setLayoutName: (name) =>
     set((s) => ({ data: { ...s.data, name }, isDirty: true })),
   loadLayout: (data) => set({ data, isDirty: false }),

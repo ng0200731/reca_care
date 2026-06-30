@@ -1,34 +1,39 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 
 type Customer = {
-  id: string;
+  id: number;
+  customerId: string;
   companyName: string;
 };
 
 export default function FontCreate() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [file, setFile] = useState<File | null>(null);
+  const [fontName, setFontName] = useState("");
   const [customerId, setCustomerId] = useState("");
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState("");
 
-  useEffect(() => {
-    let cancelled = false;
-    const fetchCustomers = async () => {
-      try {
-        const res = await fetch("/api/customers");
-        if (!res.ok) throw new Error("Failed");
-        const data = await res.json();
-        if (!cancelled) setCustomers(data);
-      } catch {}
-    };
-    fetchCustomers();
-    return () => {
-      cancelled = true;
-    };
+  const fetchCustomers = useCallback(async () => {
+    try {
+      const res = await fetch("/api/customers");
+      if (!res.ok) throw new Error("Failed");
+      const data = await res.json();
+      setCustomers(data);
+    } catch {}
   }, []);
+
+  useEffect(() => {
+    fetchCustomers();
+  }, [fetchCustomers]);
+
+  useEffect(() => {
+    if (file) {
+      setFontName(file.name.replace(/\.[^/.]+$/, ""));
+    }
+  }, [file]);
 
   const handleUpload = async () => {
     if (!file) {
@@ -40,17 +45,27 @@ export default function FontCreate() {
       setMessage("Only .ttf and .otf files are allowed");
       return;
     }
+    if (!fontName.trim()) {
+      setMessage("Font name is required");
+      return;
+    }
     setUploading(true);
     setMessage("");
     try {
       const formData = new FormData();
       formData.append("file", file);
+      formData.append("fontName", fontName.trim());
       if (customerId) formData.append("customerId", customerId);
       const res = await fetch("/api/fonts", { method: "POST", body: formData });
-      if (!res.ok) throw new Error("Failed");
-      setMessage("Font uploaded successfully");
-      setFile(null);
-      setCustomerId("");
+      const result = await res.json();
+      if (result.success) {
+        setMessage("Font uploaded successfully");
+        setFile(null);
+        setFontName("");
+        setCustomerId("");
+      } else {
+        setMessage(result.error || "Failed to upload font");
+      }
     } catch {
       setMessage("Failed to upload font");
     } finally {
@@ -83,20 +98,31 @@ export default function FontCreate() {
           {file && <p className="mt-3 text-sm text-[var(--foreground)]/70">Selected: {file.name}</p>}
         </div>
 
-        <div className="mt-6">
-          <label className="block text-sm font-medium text-[var(--foreground)]/80 mb-1.5">Assign to Customer (optional)</label>
-          <select
-            value={customerId}
-            onChange={(e) => setCustomerId(e.target.value)}
-            className="w-full px-3.5 py-2 border border-[var(--border)] rounded-lg text-sm bg-white text-[var(--foreground)] focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20 outline-none"
-          >
-            <option value="">Public</option>
-            {customers.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.companyName}
-              </option>
-            ))}
-          </select>
+        <div className="mt-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-[var(--foreground)]/80 mb-1.5">Font Name</label>
+            <input
+              type="text"
+              value={fontName}
+              onChange={(e) => setFontName(e.target.value)}
+              className="w-full px-3.5 py-2 border border-[var(--border)] rounded-lg text-sm bg-white text-[var(--foreground)] focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20 outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-[var(--foreground)]/80 mb-1.5">Customer</label>
+            <select
+              value={customerId}
+              onChange={(e) => setCustomerId(e.target.value)}
+              className="w-full px-3.5 py-2 border border-[var(--border)] rounded-lg text-sm bg-white text-[var(--foreground)] focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20 outline-none"
+            >
+              <option value="">Public</option>
+              {customers.map((c) => (
+                <option key={c.id} value={c.customerId}>
+                  {c.companyName}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         <div className="mt-6">

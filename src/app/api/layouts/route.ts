@@ -48,6 +48,7 @@ export async function POST(request: Request) {
             paddingR2Left: body.paddingRegion2?.left ?? 0,
             paddingSyncRegions: body.paddingSyncRegions ?? null,
             viewMode: body.viewMode ?? "side-by-side",
+            isBackFlipped: body.isBackFlipped ?? null,
           },
         },
       },

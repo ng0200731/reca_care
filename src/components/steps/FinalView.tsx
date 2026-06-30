@@ -3,7 +3,7 @@
 import { useLayoutStore } from "@/store/layoutStore";
 import type { ViewMode } from "@/lib/types";
 import LabelCanvas from "../canvas/LabelCanvas";
-import { generatePdfLabel, generateCombinedPdfLabel } from "@/lib/utils";
+import { generatePdfLabel, generateProductionPdfLabel } from "@/lib/utils";
 
 function downloadPdf(filename: string, pdf: ArrayBuffer) {
   const blob = new Blob([pdf], { type: "application/pdf" });
@@ -20,6 +20,7 @@ function downloadPdf(filename: string, pdf: ArrayBuffer) {
 export default function FinalView() {
   const data = useLayoutStore((s) => s.data);
   const setViewMode = useLayoutStore((s) => s.setViewMode);
+  const setIsBackFlipped = useLayoutStore((s) => s.setIsBackFlipped);
   const setStep = useLayoutStore((s) => s.setStep);
 
   const isLoop = data.cuttingType === "loop";
@@ -34,12 +35,14 @@ export default function FinalView() {
       ? "flex flex-col sm:flex-row gap-6 items-start justify-center"
       : "flex flex-col gap-6 items-center";
 
-  const handleExport = (side: "front" | "back" | "both") => {
+  const handleExport = async (side: "front" | "back" | "both") => {
     if (side === "both") {
-      const combinedPdf = generateCombinedPdfLabel(
+      const combinedPdf = await generateProductionPdfLabel(
         data.widthMm,
         data.heightMm,
         data.orientation,
+        data.viewMode,
+        data.isBackFlipped ?? false,
         data.loopFoldOrientation,
         data.loopFoldDistanceMm,
         data.padding,
@@ -148,6 +151,9 @@ export default function FinalView() {
             showPadding
             showDimensions
             isFront={false}
+            flipped={data.isBackFlipped}
+            onFlipToggle={() => setIsBackFlipped(!data.isBackFlipped)}
+            showFlipButton
           />
         </div>
       </div>

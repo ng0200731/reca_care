@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 type Member = {
-  id: string;
+  id: number;
   name: string;
   title: string | null;
   email: string | null;
@@ -11,8 +11,8 @@ type Member = {
 };
 
 type Customer = {
-  id: string;
-  customerCode: string;
+  id: number;
+  customerId: string;
   companyName: string;
   companyType: string | null;
   emailDomain: string | null;
@@ -50,7 +50,7 @@ export default function CustomerView() {
     };
   }, [refreshKey]);
 
-  const deleteCustomer = async (id: string) => {
+  const deleteCustomer = async (id: number) => {
     if (!confirm("Delete this customer and all members?")) return;
     try {
       const res = await fetch(`/api/customers/${id}`, { method: "DELETE" });
@@ -128,7 +128,7 @@ export default function CustomerView() {
               <tbody className="divide-y divide-[var(--border)]">
                 {customers.map((c) => (
                   <tr key={c.id} className="hover:bg-[var(--muted)]/50">
-                    <td className="px-4 py-3 font-mono text-xs">{c.customerCode}</td>
+                    <td className="px-4 py-3 font-mono text-xs">{c.customerId}</td>
                     <td className="px-4 py-3 font-medium text-[var(--foreground)]">{c.companyName}</td>
                     <td className="px-4 py-3 capitalize">{c.companyType || "-"}</td>
                     <td className="px-4 py-3">{c.emailDomain || "-"}</td>

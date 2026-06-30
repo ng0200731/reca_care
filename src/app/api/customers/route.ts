@@ -19,11 +19,16 @@ export async function POST(request: Request) {
     const body = await request.json();
     const customer = await prisma.customer.create({
       data: {
+        customerId: body.customerId || `CUST-${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
         companyName: body.companyName,
         emailDomain: body.emailDomain ?? null,
+        email: body.email ?? null,
+        phone: body.phone ?? null,
         companyType: body.companyType ?? null,
         address: body.address ?? null,
         notes: body.notes ?? null,
+        memberName: body.memberName ?? null,
+        memberTitle: body.memberTitle ?? null,
       },
       include: { members: true },
     });

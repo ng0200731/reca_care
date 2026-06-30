@@ -10,6 +10,7 @@ import TranslationView from "@/components/modules/TranslationView";
 import FontCreate from "@/components/modules/FontCreate";
 import FontView from "@/components/modules/FontView";
 import { useLayoutStore } from "@/store/layoutStore";
+import { generateProductionPdfLabel } from "@/lib/utils";
 
 function generateSvgString(
   widthMm: number,
@@ -76,6 +77,7 @@ function generateEpsPanel(
   w: number,
   h: number,
   isFront: boolean,
+  isFlipped: boolean,
   foldOrientation?: string,
   foldDistanceMm?: number,
   padding?: PaddingValues,
@@ -84,7 +86,17 @@ function generateEpsPanel(
   const centerText = (x: number, y: number, text: string, size: number) =>
     `/Helvetica findfont ${size} scalefont setfont\n${x} ${y} moveto\n(${text}) dup stringwidth pop 2 div neg 0 rmoveto\nshow`;
 
-  let body = `% Label outline
+  let body = "% Panel start\ngsave\n";
+
+  if (isFlipped) {
+    body += `% Flip back side upside down
+${w / 2} ${h / 2} translate
+180 rotate
+${-w / 2} ${-h / 2} translate
+`;
+  }
+
+  body += `% Label outline
 0 0 0 setrgbcolor
 0.3 setlinewidth
 newpath 0 0 moveto ${w} 0 lineto ${w} ${h} lineto 0 ${h} lineto closepath stroke
@@ -134,7 +146,51 @@ newpath 0 ${foldY} moveto ${w} ${foldY} lineto stroke
     body += drawEpsPadding(w, h, padding, 0, 0, w, h);
   }
 
+  body += `% Dimensions
+0 0 0 setrgbcolor
+/Helvetica findfont 2.5 scalefont setfont
+${w / 2} -3 moveto
+(${w.toFixed(0)} mm) dup stringwidth pop 2 div neg 0 rmoveto
+show
+gsave
+${w + 3} ${h / 2} translate
+90 rotate
+0 0 moveto
+(${h.toFixed(0)} mm) dup stringwidth pop 2 div neg 0 rmoveto
+show
+grestore
+`;
+
+  body += "grestore\n% Panel end\n";
   return body;
+}
+
+const A_SERIES_MM = [
+  { name: "A4", w: 210, h: 297 },
+  { name: "A3", w: 297, h: 420 },
+  { name: "A2", w: 420, h: 594 },
+  { name: "A1", w: 594, h: 841 },
+  { name: "A0", w: 841, h: 1189 },
+];
+
+function findArtboardSize(
+  reqW: number,
+  reqH: number
+): { w: number; h: number; name: string; orientation: "portrait" | "landscape" } {
+  for (const size of A_SERIES_MM) {
+    if (reqW <= size.w && reqH <= size.h) {
+      return { w: size.w, h: size.h, name: size.name, orientation: "portrait" };
+    }
+    if (reqW <= size.h && reqH <= size.w) {
+      return { w: size.h, h: size.w, name: size.name, orientation: "landscape" };
+    }
+  }
+  return {
+    w: reqW,
+    h: reqH,
+    name: "Custom",
+    orientation: reqW > reqH ? "landscape" : "portrait",
+  };
 }
 
 function generateCombinedEpsString(
@@ -142,6 +198,7 @@ function generateCombinedEpsString(
   heightMm: number,
   orientation: "portrait" | "landscape",
   viewMode: "side-by-side" | "top-bottom",
+  isBackFlipped: boolean,
   foldOrientation?: string,
   foldDistanceMm?: number,
   padding?: PaddingValues,
@@ -150,24 +207,31 @@ function generateCombinedEpsString(
   const w = orientation === "portrait" ? widthMm : heightMm;
   const h = orientation === "portrait" ? heightMm : widthMm;
   const gapMm = 10;
+  const marginMm = 8;
   const isSideBySide = viewMode === "side-by-side";
   const totalW = isSideBySide ? w * 2 + gapMm : w;
   const totalH = isSideBySide ? h : h * 2 + gapMm;
-  const mmToPt = 72 / 25.4;
-  const pw = totalW * mmToPt;
-  const ph = totalH * mmToPt;
 
-  const frontPanel = generateEpsPanel(w, h, true, foldOrientation, foldDistanceMm, padding, paddingRegion2);
-  const backPanel = generateEpsPanel(w, h, false, foldOrientation, foldDistanceMm, padding, paddingRegion2);
+  const reqW = totalW + marginMm * 2;
+  const reqH = totalH + marginMm * 2;
+  const artboard = findArtboardSize(reqW, reqH);
+
+  const mmToPt = 72 / 25.4;
+  const pw = artboard.w * mmToPt;
+  const ph = artboard.h * mmToPt;
+
+  const frontPanel = generateEpsPanel(w, h, true, false, foldOrientation, foldDistanceMm, padding, paddingRegion2);
+  const backPanel = generateEpsPanel(w, h, false, isBackFlipped, foldOrientation, foldDistanceMm, padding, paddingRegion2);
 
   const backTranslate = isSideBySide
-    ? `${w + gapMm} 0 translate`
-    : `0 ${h + gapMm} translate`;
+    ? `${marginMm + w + gapMm} ${marginMm} translate`
+    : `${marginMm} ${marginMm + h + gapMm} translate`;
 
   return `%!PS-Adobe-3.0 EPSF-3.0
 %%BoundingBox: 0 0 ${Math.ceil(pw)} ${Math.ceil(ph)}
 %%HiResBoundingBox: 0 0 ${pw.toFixed(4)} ${ph.toFixed(4)}
 %%Creator: WashCare Label Designer
+%%Artboard: ${artboard.name} ${artboard.orientation}
 %%EndComments
 %%BeginProlog
 %%EndProlog
@@ -175,9 +239,14 @@ function generateCombinedEpsString(
 gsave
 72 25.4 div 72 25.4 div scale
 % Front panel
-${frontPanel}% Back panel
+gsave
+${marginMm} ${marginMm} translate
+${frontPanel}grestore
+% Back panel
+gsave
 ${backTranslate}
 ${backPanel}grestore
+grestore
 showpage
 %%EOF`;
 }
@@ -258,6 +327,7 @@ export default function Home() {
           },
           paddingSyncRegions: d.paddingSyncRegions ?? undefined,
           viewMode: d.viewMode,
+          isBackFlipped: d.isBackFlipped ?? undefined,
         });
         setStep("final");
         setViewPanel("layout-create");
@@ -366,6 +436,7 @@ export default function Home() {
           data.heightMm,
           data.orientation,
           data.viewMode,
+          data.isBackFlipped ?? false,
           data.loopFoldOrientation,
           foldDistance,
           data.padding,
@@ -373,27 +444,35 @@ export default function Home() {
         );
         downloadBlob(epsBoth, `${baseName}.ai`, "application/postscript");
       } else if (format === "pdf") {
-        const { jsPDF } = await import("jspdf");
-        const w = data.orientation === "portrait" ? data.widthMm : data.heightMm;
-        const h = data.orientation === "portrait" ? data.heightMm : data.widthMm;
-        const doc = new jsPDF({
-          orientation: w > h ? "landscape" : "portrait",
-          unit: "mm",
-          format: [w, h],
-        });
-        const svgBlob = new Blob([svgFront], { type: "image/svg+xml;charset=utf-8" });
-        const url = URL.createObjectURL(svgBlob);
-        const img = new Image();
-        await new Promise<void>((resolve, reject) => {
-          img.onload = () => {
-            doc.addImage(img, "PNG", 0, 0, w, h);
-            doc.save(`${baseName}.pdf`);
-            URL.revokeObjectURL(url);
-            resolve();
-          };
-          img.onerror = reject;
-          img.src = url;
-        });
+        const foldDistance =
+          data.loopMidForm && data.loopFoldOrientation
+            ? Math.round(
+                (data.loopFoldOrientation === "vertical" ? data.widthMm : data.heightMm) / 2
+              )
+            : data.loopFoldDistanceMm;
+        const pdf = await generateProductionPdfLabel(
+          data.widthMm,
+          data.heightMm,
+          data.orientation,
+          data.viewMode,
+          data.isBackFlipped ?? false,
+          data.loopFoldOrientation,
+          foldDistance,
+          data.padding,
+          data.paddingRegion2,
+          true,
+          data.cuttingType === "loop",
+          data.loopMidForm
+        );
+        const blob = new Blob([pdf], { type: "application/pdf" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${baseName}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
       }
     },
     [data]

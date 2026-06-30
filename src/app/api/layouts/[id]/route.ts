@@ -44,7 +44,8 @@ export async function PUT(
       body.padding !== undefined ||
       body.paddingRegion2 !== undefined ||
       body.paddingSyncRegions !== undefined ||
-      body.viewMode !== undefined;
+      body.viewMode !== undefined ||
+      body.isBackFlipped !== undefined;
 
     if (hasDetails) {
       data.details = {
@@ -69,6 +70,7 @@ export async function PUT(
             paddingR2Left: body.paddingRegion2?.left ?? 0,
             paddingSyncRegions: body.paddingSyncRegions ?? null,
             viewMode: body.viewMode ?? "side-by-side",
+            isBackFlipped: body.isBackFlipped ?? null,
           },
           update: {
             materialId: body.materialId,
@@ -90,6 +92,7 @@ export async function PUT(
             paddingR2Left: body.paddingRegion2?.left ?? 0,
             paddingSyncRegions: body.paddingSyncRegions ?? null,
             viewMode: body.viewMode ?? "side-by-side",
+            isBackFlipped: body.isBackFlipped ?? null,
           },
         },
       };

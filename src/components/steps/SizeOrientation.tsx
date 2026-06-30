@@ -84,6 +84,7 @@ export default function SizeOrientation() {
             heightMm={data.heightMm}
             orientation={data.orientation}
             maxDisplayPx={300}
+            showDimensions
           />
         </div>
       </div>

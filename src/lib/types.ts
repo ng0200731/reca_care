@@ -56,4 +56,5 @@ export type LayoutData = {
   paddingRegion2?: PaddingValues;
   paddingSyncRegions?: boolean;
   viewMode: ViewMode;
+  isBackFlipped?: boolean;
 };

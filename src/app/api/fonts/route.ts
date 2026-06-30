@@ -9,10 +9,19 @@ export async function GET() {
       include: { customer: { select: { companyName: true } } },
       orderBy: { createdAt: "desc" },
     });
-    return NextResponse.json(fonts);
+    const result = fonts.map((f) => ({
+      id: f.id,
+      font_name: f.name,
+      filename: f.fileName,
+      file_path: f.filePath,
+      customer_id: f.customerId,
+      customer_name: f.customer?.companyName || null,
+      created_at: f.createdAt,
+    }));
+    return NextResponse.json({ success: true, fonts: result });
   } catch (e) {
     console.error(e);
-    return NextResponse.json({ error: "Failed to fetch fonts" }, { status: 500 });
+    return NextResponse.json({ success: false, error: "Failed to fetch fonts" }, { status: 500 });
   }
 }
 
@@ -37,9 +46,10 @@ export async function POST(request: Request) {
     const filePath = join(process.cwd(), "public", "fonts", fileName);
     await writeFile(filePath, buffer);
 
+    const fontName = (formData.get("fontName") as string) || file.name.replace(/\.[^/.]+$/, "");
     const font = await prisma.fontFamily.create({
       data: {
-        name: file.name.replace(/\.[^/.]+$/, ""),
+        name: fontName,
         fileName: file.name,
         filePath: `/fonts/${fileName}`,
         customerId,
@@ -47,7 +57,21 @@ export async function POST(request: Request) {
       include: { customer: { select: { companyName: true } } },
     });
 
-    return NextResponse.json(font, { status: 201 });
+    return NextResponse.json(
+      {
+        success: true,
+        font: {
+          id: font.id,
+          font_name: font.name,
+          filename: font.fileName,
+          file_path: font.filePath,
+          customer_id: font.customerId,
+          customer_name: font.customer?.companyName || null,
+          created_at: font.createdAt,
+        },
+      },
+      { status: 201 }
+    );
   } catch (e) {
     console.error(e);
     return NextResponse.json({ error: "Failed to upload font" }, { status: 500 });

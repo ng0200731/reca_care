@@ -122,6 +122,7 @@ export default function LoopDetails() {
               foldDistanceMm={data.loopFoldDistanceMm}
               foldMidForm={data.loopMidForm}
               showFold
+              showDimensions
             />
           </div>
         </div>
