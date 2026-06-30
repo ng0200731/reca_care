@@ -11,6 +11,7 @@ import type {
   PaddingOption,
   PaddingValues,
   ViewMode,
+  ViewPanel,
 } from "@/lib/types";
 
 const defaultPadding: PaddingValues = { top: 0, right: 0, bottom: 0, left: 0 };
@@ -21,11 +22,13 @@ type LayoutStore = {
   data: LayoutData;
   isDirty: boolean;
   savedLayouts: { id: string; name: string }[];
-  viewPanel: "create" | "view";
+  viewPanel: ViewPanel;
+  menuExpanded: Record<string, boolean>;
 
   setStep: (step: StepId) => void;
   setMaterials: (materials: Material[]) => void;
-  setViewPanel: (panel: "create" | "view") => void;
+  setViewPanel: (panel: ViewPanel) => void;
+  setMenuExpanded: (key: string, expanded: boolean) => void;
   setSavedLayouts: (list: { id: string; name: string }[]) => void;
 
   setMaterialId: (id: string) => void;
@@ -64,11 +67,14 @@ export const useLayoutStore = create<LayoutStore>((set) => ({
   data: { ...initialData },
   isDirty: false,
   savedLayouts: [],
-  viewPanel: "create",
+  viewPanel: "layout-create",
+  menuExpanded: {},
 
   setStep: (step) => set({ step }),
   setMaterials: (materials) => set({ materials }),
   setViewPanel: (viewPanel) => set({ viewPanel }),
+  setMenuExpanded: (key, expanded) =>
+    set((s) => ({ menuExpanded: { ...s.menuExpanded, [key]: expanded } })),
   setSavedLayouts: (savedLayouts) => set({ savedLayouts }),
 
   setMaterialId: (materialId) =>

@@ -245,7 +245,7 @@ export default function Home() {
           viewMode: d.viewMode,
         });
         setStep("final");
-        setViewPanel("create");
+        setViewPanel("layout-create");
       } catch {
         setLoadError("Failed to load layout");
       } finally {
@@ -378,7 +378,7 @@ export default function Home() {
             <p className="text-[10px] text-[var(--foreground)]/50">Design Studio</p>
           </div>
         </header>
-        {viewPanel === "create" ? (
+        {viewPanel === "layout-create" ? (
           <div className="max-w-3xl mx-auto p-6 lg:p-10">
             <StepRenderer />
 

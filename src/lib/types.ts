@@ -15,6 +15,16 @@ export type PaddingOption = "same" | "individual";
 
 export type ViewMode = "side-by-side" | "top-bottom";
 
+export type ViewPanel =
+  | "customer-create"
+  | "customer-view"
+  | "layout-create"
+  | "layout-view"
+  | "translation-create"
+  | "translation-view"
+  | "font-create"
+  | "font-view";
+
 export type PaddingValues = {
   top: number;
   right: number;

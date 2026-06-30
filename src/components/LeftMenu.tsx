@@ -22,7 +22,7 @@ export default function LeftMenu({ onNavigate }: { onNavigate?: () => void }) {
   const stepOrder = steps.map((s) => s.id);
   const currentIdx = stepOrder.indexOf(step);
 
-  const handleSetViewPanel = (panel: "create" | "view") => {
+  const handleSetViewPanel = (panel: "layout-create" | "layout-view") => {
     setViewPanel(panel);
     onNavigate?.();
   };
@@ -57,9 +57,9 @@ export default function LeftMenu({ onNavigate }: { onNavigate?: () => void }) {
 
         <div className="space-y-1 mb-6">
           <button
-            onClick={() => handleSetViewPanel("create")}
+            onClick={() => handleSetViewPanel("layout-create")}
             className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer ${
-              viewPanel === "create"
+              viewPanel === "layout-create"
                 ? "bg-[var(--primary)]/10 text-[var(--primary)]"
                 : "text-[var(--foreground)]/70 hover:bg-[var(--muted)] hover:text-[var(--foreground)]"
             }`}
@@ -70,9 +70,9 @@ export default function LeftMenu({ onNavigate }: { onNavigate?: () => void }) {
             Create
           </button>
           <button
-            onClick={() => handleSetViewPanel("view")}
+            onClick={() => handleSetViewPanel("layout-view")}
             className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer ${
-              viewPanel === "view"
+              viewPanel === "layout-view"
                 ? "bg-[var(--primary)]/10 text-[var(--primary)]"
                 : "text-[var(--foreground)]/70 hover:bg-[var(--muted)] hover:text-[var(--foreground)]"
             }`}
@@ -90,7 +90,7 @@ export default function LeftMenu({ onNavigate }: { onNavigate?: () => void }) {
           </button>
         </div>
 
-        {viewPanel === "create" && (
+        {viewPanel === "layout-create" && (
           <>
             <div className="mb-2 px-3 mt-6">
               <span className="text-[11px] font-semibold text-[var(--foreground)]/40 uppercase tracking-wider">
@@ -142,7 +142,7 @@ export default function LeftMenu({ onNavigate }: { onNavigate?: () => void }) {
           </>
         )}
 
-        {viewPanel === "view" && (
+        {viewPanel === "layout-view" && (
           <>
             <div className="mb-2 px-3 mt-6">
               <span className="text-[11px] font-semibold text-[var(--foreground)]/40 uppercase tracking-wider">
