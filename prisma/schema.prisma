@@ -1,0 +1,59 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Material {
+  id           String          @id @default(uuid())
+  name         String
+  imageUrl     String          @map("image_url")
+  displayOrder Int             @map("display_order")
+  createdAt    DateTime        @default(now()) @map("created_at")
+  layouts      LayoutDetail[]
+
+  @@map("materials")
+}
+
+model Layout {
+  id        String          @id @default(uuid())
+  name      String          @unique
+  details   LayoutDetail?
+  createdAt DateTime        @default(now()) @map("created_at")
+  updatedAt DateTime        @updatedAt @map("updated_at")
+
+  @@map("layouts")
+}
+
+model LayoutDetail {
+  id                  String   @id @default(uuid())
+  layoutId            String   @unique @map("layout_id")
+  layout              Layout   @relation(fields: [layoutId], references: [id], onDelete: Cascade)
+  materialId          String   @map("material_id")
+  material            Material @relation(fields: [materialId], references: [id])
+  widthMm             Float    @map("width_mm")
+  heightMm            Float    @map("height_mm")
+  orientation         String
+  cuttingType         String   @map("cutting_type")
+  loopFoldOrientation String?  @map("loop_fold_orientation")
+  loopMidForm         Boolean? @map("loop_mid_form")
+  loopFoldDistanceMm  Float?   @map("loop_fold_distance_mm")
+  paddingOption       String   @map("padding_option")
+  paddingTop          Float    @default(0) @map("padding_top")
+  paddingRight        Float    @default(0) @map("padding_right")
+  paddingBottom       Float    @default(0) @map("padding_bottom")
+  paddingLeft         Float    @default(0) @map("padding_left")
+  paddingR2Top        Float    @default(0) @map("padding_r2_top")
+  paddingR2Right      Float    @default(0) @map("padding_r2_right")
+  paddingR2Bottom     Float    @default(0) @map("padding_r2_bottom")
+  paddingR2Left       Float    @default(0) @map("padding_r2_left")
+  paddingSyncRegions  Boolean? @map("padding_sync_regions")
+  viewMode            String   @default("side-by-side") @map("view_mode")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  @@map("layout_details")
+}

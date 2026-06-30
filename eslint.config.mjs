@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Installed AI skill assets
+    ".opencode/**",
+    "node_modules/**",
   ]),
 ]);
 
