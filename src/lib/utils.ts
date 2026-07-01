@@ -61,16 +61,17 @@ export function generateSvgLabel(
   parts.push(`<?xml version="1.0" encoding="UTF-8"?>`);
   parts.push(`<svg xmlns="http://www.w3.org/2000/svg" width="${w}mm" height="${h}mm" viewBox="0 0 ${w} ${h}">`);
 
-  const content: string[] = [];
+  const shapes: string[] = [];
+  const text: string[] = [];
 
-  content.push(`<rect x="0" y="0" width="${w}" height="${h}" fill="white" stroke="black" stroke-width="0.3"/>`);
+  shapes.push(`<rect x="0" y="0" width="${w}" height="${h}" fill="white" stroke="black" stroke-width="0.3"/>`);
 
   if (labelText) {
     if (labelText.isFront) {
-      content.push(`<text x="${w / 2}" y="${h / 2 - 4}" text-anchor="middle" font-size="4" fill="#333">CARE LABEL</text>`);
-      content.push(`<text x="${w / 2}" y="${h / 2 + 4}" text-anchor="middle" font-size="3" fill="#666">FRONT SIDE</text>`);
+      text.push(`<text x="${w / 2}" y="${h / 2 - 4}" text-anchor="middle" font-size="4" fill="#333">CARE LABEL</text>`);
+      text.push(`<text x="${w / 2}" y="${h / 2 + 4}" text-anchor="middle" font-size="3" fill="#666">FRONT SIDE</text>`);
     } else {
-      content.push(`<text x="${w / 2}" y="${h / 2}" text-anchor="middle" font-size="4" fill="#333">BACK SIDE</text>`);
+      text.push(`<text x="${w / 2}" y="${h / 2}" text-anchor="middle" font-size="4" fill="#333">BACK SIDE</text>`);
     }
   }
 
@@ -78,17 +79,17 @@ export function generateSvgLabel(
     const distance = getFoldDistance(foldOrientation, w, h, foldDistanceMm, foldMidForm);
     if (foldOrientation === "vertical") {
       const y2 = foldMidForm ? h / 2 : h;
-      content.push(`<line x1="${distance}" y1="0" x2="${distance}" y2="${y2}" stroke="#DC2626" stroke-width="0.3" stroke-dasharray="2,2"/>`);
+      shapes.push(`<line x1="${distance}" y1="0" x2="${distance}" y2="${y2}" stroke="#DC2626" stroke-width="0.3" stroke-dasharray="2,2"/>`);
     } else {
       const x2 = foldMidForm ? w / 2 : w;
-      content.push(`<line x1="0" y1="${distance}" x2="${x2}" y2="${distance}" stroke="#DC2626" stroke-width="0.3" stroke-dasharray="2,2"/>`);
+      shapes.push(`<line x1="0" y1="${distance}" x2="${x2}" y2="${distance}" stroke="#DC2626" stroke-width="0.3" stroke-dasharray="2,2"/>`);
     }
   }
 
   if (showPadding && padding) {
     const drawPad = (pad: PaddingValues, offsetX: number = 0, offsetY: number = 0, regionW: number = w, regionH: number = h) => {
       if (pad.top + pad.bottom >= regionH || pad.left + pad.right >= regionW) return;
-      content.push(`<rect x="${offsetX + pad.left}" y="${offsetY + pad.top}" width="${regionW - pad.left - pad.right}" height="${regionH - pad.top - pad.bottom}" fill="none" stroke="#22c55e" stroke-width="0.3" stroke-dasharray="2,2"/>`);
+      shapes.push(`<rect x="${offsetX + pad.left}" y="${offsetY + pad.top}" width="${regionW - pad.left - pad.right}" height="${regionH - pad.top - pad.bottom}" fill="none" stroke="#22c55e" stroke-width="0.3" stroke-dasharray="2,2"/>`);
     };
 
     if (foldOrientation) {
@@ -108,16 +109,25 @@ export function generateSvgLabel(
 
   if (showDimensions) {
     const fontSize = 2.5;
-    content.push(`<text x="${w / 2}" y="${h + 3}" text-anchor="middle" font-size="${fontSize}" fill="#333">${w.toFixed(0)} mm</text>`);
-    content.push(`<text x="${w + 3}" y="${h / 2}" text-anchor="middle" font-size="${fontSize}" fill="#333" transform="rotate(90,${w + 3},${h / 2})">${h.toFixed(0)} mm</text>`);
+    text.push(`<text x="${w / 2}" y="${h + 3}" text-anchor="middle" font-size="${fontSize}" fill="#333">${w.toFixed(0)} mm</text>`);
+    text.push(`<text x="${w + 3}" y="${h / 2}" text-anchor="middle" font-size="${fontSize}" fill="#333" transform="rotate(90,${w + 3},${h / 2})">${h.toFixed(0)} mm</text>`);
   }
 
-  if (isFlipped) {
+  const isBackFlipped = isFlipped && labelText && !labelText.isFront;
+
+  if (isBackFlipped && foldOrientation === "vertical") {
+    parts.push(`<g transform="scale(-1, 1) translate(-${w}, 0)">`);
+    parts.push(...shapes);
+    parts.push(`</g>`);
+    parts.push(...text);
+  } else if (isBackFlipped) {
     parts.push(`<g transform="rotate(180, ${w / 2}, ${h / 2})">`);
-    parts.push(...content);
+    parts.push(...shapes);
+    parts.push(...text);
     parts.push(`</g>`);
   } else {
-    parts.push(...content);
+    parts.push(...shapes);
+    parts.push(...text);
   }
 
   parts.push(`</svg>`);

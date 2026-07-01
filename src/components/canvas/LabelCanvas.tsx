@@ -59,7 +59,7 @@ export default function LabelCanvas({
     return { w, h, scale, cw, ch, foldX, foldY };
   }, [widthMm, heightMm, orientation, maxDisplayPx, showFold, foldOrientation, foldDistanceMm, foldMidForm]);
 
-  const btnSize = 5 * canvas.scale;
+  const btnSize = 10 * canvas.scale;
   const btnX = canvas.cw - btnSize - 0.75 * canvas.scale;
   const btnY = 0.75 * canvas.scale;
 
@@ -74,45 +74,8 @@ export default function LabelCanvas({
       viewBox={`-1 -1 ${vbW} ${vbH}`}
       className="bg-white shadow-[var(--shadow-md)] border border-[var(--border)] rounded-sm"
     >
-      <g transform={flipped ? `rotate(180, ${canvas.cw / 2}, ${canvas.ch / 2})` : undefined}>
+      <g transform={!isFront && flipped ? (foldOrientation === "vertical" ? `scale(-1, 1) translate(-${canvas.cw}, 0)` : `rotate(180, ${canvas.cw / 2}, ${canvas.ch / 2})`) : undefined}>
         <rect x="0" y="0" width={canvas.cw} height={canvas.ch} fill="white" stroke="#0F172A" strokeWidth={1} />
-
-        {isFront && (
-          <>
-            <text
-              x={canvas.cw / 2}
-              y={canvas.ch / 2 - 8 * canvas.scale}
-              textAnchor="middle"
-              fontSize={4 * canvas.scale}
-              fill="#0F172A"
-              fontWeight={500}
-            >
-              CARE LABEL
-            </text>
-            <text
-              x={canvas.cw / 2}
-              y={canvas.ch / 2 + 4 * canvas.scale}
-              textAnchor="middle"
-              fontSize={2.5 * canvas.scale}
-              fill="#64748B"
-            >
-              FRONT SIDE
-            </text>
-          </>
-        )}
-
-        {!isFront && (
-          <text
-            x={canvas.cw / 2}
-            y={canvas.ch / 2}
-            textAnchor="middle"
-            fontSize={4 * canvas.scale}
-            fill="#0F172A"
-            fontWeight={500}
-          >
-            BACK SIDE
-          </text>
-        )}
 
         {showFold && canvas.foldX != null && (
           <line
@@ -183,6 +146,45 @@ export default function LabelCanvas({
           }
           return drawPad(padding);
         })()}
+      </g>
+
+      <g transform={!isFront && flipped && foldOrientation !== "vertical" ? `rotate(180, ${canvas.cw / 2}, ${canvas.ch / 2})` : undefined}>
+        {isFront && (
+          <>
+            <text
+              x={canvas.cw / 2}
+              y={canvas.ch / 2 - 8 * canvas.scale}
+              textAnchor="middle"
+              fontSize={4 * canvas.scale}
+              fill="#0F172A"
+              fontWeight={500}
+            >
+              CARE LABEL
+            </text>
+            <text
+              x={canvas.cw / 2}
+              y={canvas.ch / 2 + 4 * canvas.scale}
+              textAnchor="middle"
+              fontSize={2.5 * canvas.scale}
+              fill="#64748B"
+            >
+              FRONT SIDE
+            </text>
+          </>
+        )}
+
+        {!isFront && (
+          <text
+            x={canvas.cw / 2}
+            y={canvas.ch / 2}
+            textAnchor="middle"
+            fontSize={4 * canvas.scale}
+            fill="#0F172A"
+            fontWeight={500}
+          >
+            BACK SIDE
+          </text>
+        )}
 
         {showDimensions && (
           <>

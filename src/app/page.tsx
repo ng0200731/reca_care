@@ -56,37 +56,14 @@ function generateEpsPanel(
   const centerText = (x: number, y: number, text: string, size: number) =>
     `/Helvetica findfont ${size} scalefont setfont\n${x} ${y} moveto\n(${text}) dup stringwidth pop 2 div neg 0 rmoveto\nshow`;
 
-  let body = "% Panel start\ngsave\n";
-
-  if (isFlipped) {
-    body += `% Flip back side upside down
-${w / 2} ${h / 2} translate
-180 rotate
-${-w / 2} ${-h / 2} translate
-`;
-  }
-
-  body += `% Label outline
+  let shapes = `% Label outline
 0 0 0 setrgbcolor
 0.3 setlinewidth
 newpath 0 0 moveto ${w} 0 lineto ${w} ${h} lineto 0 ${h} lineto closepath stroke
 `;
 
-  if (isFront) {
-    body += `% Front text
-0 0 0 setrgbcolor
-${centerText(w / 2, h / 2 + 4, "CARE LABEL", 4)}
-${centerText(w / 2, h / 2 - 4, "FRONT SIDE", 3)}
-`;
-  } else {
-    body += `% Back text
-0 0 0 setrgbcolor
-${centerText(w / 2, h / 2, "BACK SIDE", 4)}
-`;
-  }
-
   if (foldOrientation === "vertical" && foldDistanceMm != null) {
-    body += `% Vertical fold line
+    shapes += `% Vertical fold line
 1 0 0 setrgbcolor
 0.3 setlinewidth
 [2 2] 0 setdash
@@ -94,13 +71,13 @@ newpath ${foldDistanceMm} 0 moveto ${foldDistanceMm} ${h} lineto stroke
 [] 0 setdash
 `;
     if (padding) {
-      body += drawEpsPadding(w, h, padding, 0, 0, foldDistanceMm, h);
+      shapes += drawEpsPadding(w, h, padding, 0, 0, foldDistanceMm, h);
       const r2Pad = paddingRegion2 ?? { top: 0, right: 0, bottom: 0, left: 0 };
-      body += drawEpsPadding(w, h, r2Pad, foldDistanceMm, 0, w - foldDistanceMm, h);
+      shapes += drawEpsPadding(w, h, r2Pad, foldDistanceMm, 0, w - foldDistanceMm, h);
     }
   } else if (foldOrientation === "horizontal" && foldDistanceMm != null) {
     const foldY = h - foldDistanceMm;
-    body += `% Horizontal fold line
+    shapes += `% Horizontal fold line
 1 0 0 setrgbcolor
 0.3 setlinewidth
 [2 2] 0 setdash
@@ -108,15 +85,29 @@ newpath 0 ${foldY} moveto ${w} ${foldY} lineto stroke
 [] 0 setdash
 `;
     if (padding) {
-      body += drawEpsPadding(w, h, padding, 0, foldY, w, foldDistanceMm);
+      shapes += drawEpsPadding(w, h, padding, 0, foldY, w, foldDistanceMm);
       const r2Pad = paddingRegion2 ?? { top: 0, right: 0, bottom: 0, left: 0 };
-      body += drawEpsPadding(w, h, r2Pad, 0, 0, w, foldY);
+      shapes += drawEpsPadding(w, h, r2Pad, 0, 0, w, foldY);
     }
   } else if (padding) {
-    body += drawEpsPadding(w, h, padding, 0, 0, w, h);
+    shapes += drawEpsPadding(w, h, padding, 0, 0, w, h);
   }
 
-  body += `% Dimensions
+  let text = "";
+  if (isFront) {
+    text += `% Front text
+0 0 0 setrgbcolor
+${centerText(w / 2, h / 2 + 4, "CARE LABEL", 4)}
+${centerText(w / 2, h / 2 - 4, "FRONT SIDE", 3)}
+`;
+  } else {
+    text += `% Back text
+0 0 0 setrgbcolor
+${centerText(w / 2, h / 2, "BACK SIDE", 4)}
+`;
+  }
+
+  text += `% Dimensions
 0 0 0 setrgbcolor
 /Helvetica findfont 2.5 scalefont setfont
 ${w / 2} -3 moveto
@@ -131,7 +122,26 @@ show
 grestore
 `;
 
-  body += "grestore\n% Panel end\n";
+  let body = "% Panel start\ngsave\n";
+
+  if (isFlipped && foldOrientation === "vertical") {
+    body += `% Mirror back side left-right
+${w} 0 translate
+-1 1 scale
+${shapes}grestore
+${text}`;
+  } else if (isFlipped) {
+    body += `% Flip back side upside down
+${w / 2} ${h / 2} translate
+180 rotate
+${-w / 2} ${-h / 2} translate
+${shapes}${text}grestore
+`;
+  } else {
+    body += shapes + text + "grestore\n";
+  }
+
+  body += "% Panel end\n";
   return body;
 }
 
@@ -193,9 +203,12 @@ function generateCombinedEpsString(
   const frontPanel = generateEpsPanel(w, h, true, false, foldOrientation, foldDistanceMm, padding, paddingRegion2);
   const backPanel = generateEpsPanel(w, h, false, isBackFlipped, foldOrientation, foldDistanceMm, padding, paddingRegion2);
 
+  const frontTranslate = isSideBySide
+    ? `${marginMm} ${marginMm} translate`
+    : `${marginMm} ${marginMm + h + gapMm} translate`;
   const backTranslate = isSideBySide
     ? `${marginMm + w + gapMm} ${marginMm} translate`
-    : `${marginMm} ${marginMm + h + gapMm} translate`;
+    : `${marginMm} ${marginMm} translate`;
 
   return `%!PS-Adobe-3.0 EPSF-3.0
 %%BoundingBox: 0 0 ${Math.ceil(pw)} ${Math.ceil(ph)}
@@ -210,7 +223,7 @@ gsave
 72 25.4 div 72 25.4 div scale
 % Front panel
 gsave
-${marginMm} ${marginMm} translate
+${frontTranslate}
 ${frontPanel}grestore
 % Back panel
 gsave
