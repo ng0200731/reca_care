@@ -55,6 +55,16 @@ const topSections: MenuSection[] = [
     ],
   },
   {
+    key: "split",
+    label: "Split",
+    icon: (
+      <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h8m-8 6h16" />
+      </svg>
+    ),
+    items: [{ id: "split-workspace", label: "Workspace" }],
+  },
+  {
     key: "translation",
     label: "Translation",
     icon: (

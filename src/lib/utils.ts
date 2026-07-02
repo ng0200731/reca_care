@@ -438,6 +438,9 @@ export async function generateProductionPdfLabel(
   const reqH = totalH + marginMm * 2;
   const artboard = findArtboardSize(reqW, reqH);
 
+  const offsetX = (artboard.w - totalW) / 2;
+  const offsetY = (artboard.h - totalH) / 2;
+
   const frontSvg = generateSvgLabel(
     widthMm,
     heightMm,
@@ -473,10 +476,10 @@ export async function generateProductionPdfLabel(
   const combinedSvg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${artboard.w}mm" height="${artboard.h}mm" viewBox="0 0 ${artboard.w} ${artboard.h}">
   <rect x="0" y="0" width="${artboard.w}" height="${artboard.h}" fill="white"/>
-  <g transform="translate(${marginMm}, ${marginMm})">
+  <g transform="translate(${offsetX}, ${offsetY})">
     ${frontSvg.replace(/<[?]xml[^?]*[?]>/, "").replace(/<svg[^>]*>/, "").replace(/<\/svg>/, "")}
   </g>
-  <g transform="translate(${isSideBySide ? marginMm + w + gapMm : marginMm}, ${isSideBySide ? marginMm : marginMm + h + gapMm})">
+  <g transform="translate(${isSideBySide ? offsetX + w + gapMm : offsetX}, ${isSideBySide ? offsetY : offsetY + h + gapMm})">
     ${backSvg.replace(/<[?]xml[^?]*[?]>/, "").replace(/<svg[^>]*>/, "").replace(/<\/svg>/, "")}
   </g>
 </svg>`;

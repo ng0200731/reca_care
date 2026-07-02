@@ -1,0 +1,11 @@
+
+> washcare-label-designer@0.1.0 dev
+> next dev
+
+▲ Next.js 16.2.9 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://10.2.0.2:3000
+- Environments: .env
+✓ Ready in 519ms
+
+ POST /api/splits 201 in 737ms (next.js: 499ms, application-code: 238ms)

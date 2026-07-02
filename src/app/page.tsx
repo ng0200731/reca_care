@@ -10,8 +10,9 @@ import TranslationCreate from "@/components/modules/TranslationCreate";
 import TranslationView from "@/components/modules/TranslationView";
 import FontCreate from "@/components/modules/FontCreate";
 import FontView from "@/components/modules/FontView";
+import SplitWorkspace from "@/components/modules/SplitWorkspace";
 import { useLayoutStore } from "@/store/layoutStore";
-import { generateCombinedSvgString, generateCombinedPdfLabel } from "@/lib/utils";
+import { generateCombinedSvgString, generateProductionPdfLabel } from "@/lib/utils";
 
 type PaddingValues = {
   top: number;
@@ -203,12 +204,15 @@ function generateCombinedEpsString(
   const frontPanel = generateEpsPanel(w, h, true, false, foldOrientation, foldDistanceMm, padding, paddingRegion2);
   const backPanel = generateEpsPanel(w, h, false, isBackFlipped, foldOrientation, foldDistanceMm, padding, paddingRegion2);
 
+  const offsetX = (artboard.w - totalW) / 2;
+  const offsetY = (artboard.h - totalH) / 2;
+
   const frontTranslate = isSideBySide
-    ? `${marginMm} ${marginMm} translate`
-    : `${marginMm} ${marginMm + h + gapMm} translate`;
+    ? `${offsetX} ${offsetY} translate`
+    : `${offsetX} ${offsetY + h + gapMm} translate`;
   const backTranslate = isSideBySide
-    ? `${marginMm + w + gapMm} ${marginMm} translate`
-    : `${marginMm} ${marginMm} translate`;
+    ? `${offsetX + w + gapMm} ${offsetY} translate`
+    : `${offsetX} ${offsetY} translate`;
 
   return `%!PS-Adobe-3.0 EPSF-3.0
 %%BoundingBox: 0 0 ${Math.ceil(pw)} ${Math.ceil(ph)}
@@ -445,7 +449,7 @@ export default function Home() {
         );
         downloadBlob(epsBoth, `${baseName}.ai`, "application/postscript");
       } else if (format === "pdf") {
-        const pdf = await generateCombinedPdfLabel(
+        const pdf = await generateProductionPdfLabel(
           data.widthMm,
           data.heightMm,
           data.orientation,
@@ -687,6 +691,7 @@ export default function Home() {
 
         {viewPanel === "customer-create" && <CustomerCreate />}
         {viewPanel === "customer-view" && <CustomerView />}
+        {viewPanel === "split-workspace" && <SplitWorkspace />}
         {viewPanel === "translation-create" && <TranslationCreate />}
         {viewPanel === "translation-view" && <TranslationView />}
         {viewPanel === "font-create" && <FontCreate />}

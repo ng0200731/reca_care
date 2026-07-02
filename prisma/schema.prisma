@@ -79,11 +79,12 @@ model FontFamily {
 }
 
 model Layout {
-  id        String          @id @default(uuid())
-  name      String          @unique
+  id        String               @id @default(uuid())
+  name      String               @unique
   details   LayoutDetail?
-  createdAt DateTime        @default(now()) @map("created_at")
-  updatedAt DateTime        @updatedAt @map("updated_at")
+  splits    SplitConfiguration[]
+  createdAt DateTime             @default(now()) @map("created_at")
+  updatedAt DateTime             @updatedAt @map("updated_at")
 
   @@map("layouts")
 }
@@ -119,4 +120,52 @@ model LayoutDetail {
   updatedAt           DateTime @updatedAt @map("updated_at")
 
   @@map("layout_details")
+}
+
+model SplitConfiguration {
+  id               String               @id @default(uuid())
+  name             String
+  layoutId         String               @map("layout_id")
+  layout           Layout               @relation(fields: [layoutId], references: [id], onDelete: Cascade)
+  fontId           String?              @map("font_id")
+  fontSizeMm       Float                @map("font_size_mm")
+  allowSplitText   Boolean              @map("allow_split_text")
+  connectionText   String?              @map("connection_text")
+  imageData        String?              @map("image_data")
+  imageOpacity     Float                @default(0.3) @map("image_opacity")
+  regions          SplitRegion[]
+  contentSources   SplitContentSource[]
+  createdAt        DateTime             @default(now()) @map("created_at")
+  updatedAt        DateTime             @updatedAt @map("updated_at")
+
+  @@map("split_configurations")
+}
+
+model SplitRegion {
+  id               String             @id @default(uuid())
+  splitConfigId    String             @map("split_config_id")
+  splitConfig      SplitConfiguration @relation(fields: [splitConfigId], references: [id], onDelete: Cascade)
+  regionId         String             @map("region_id")
+  side             String
+  x                Float
+  y                Float
+  widthMm          Float              @map("width_mm")
+  heightMm         Float              @map("height_mm")
+  type             String             // overflow | fixed
+  overflowTargetId String?            @map("overflow_target_id")
+  contentSourceId  String?            @map("content_source_id")
+
+  @@map("split_regions")
+}
+
+model SplitContentSource {
+  id            String             @id @default(uuid())
+  splitConfigId String             @map("split_config_id")
+  splitConfig   SplitConfiguration @relation(fields: [splitConfigId], references: [id], onDelete: Cascade)
+  sourceType    String             @map("source_type")
+  label         String
+  translationId Int?               @map("translation_id")
+  manualText    String?            @map("manual_text")
+
+  @@map("split_content_sources")
 }

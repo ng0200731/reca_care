@@ -24,6 +24,7 @@ export type ViewPanel =
   | "customer-view"
   | "layout-create"
   | "layout-view"
+  | "split-workspace"
   | "translation-create"
   | "translation-view"
   | "font-create"
@@ -63,4 +64,43 @@ export type LayoutData = {
   paddingSyncRegions?: boolean;
   viewMode: ViewMode;
   isBackFlipped?: boolean;
+};
+
+export type SplitRegionType = "overflow" | "fixed";
+
+export type SplitContentSourceType = "translation" | "manual";
+
+export type SplitContentSource = {
+  id: string;
+  type: SplitContentSourceType;
+  label: string;
+  translationId?: number;
+  manualText?: string;
+};
+
+export type SplitRegion = {
+  id: string;
+  regionId: string;
+  side: "front" | "back";
+  x: number;
+  y: number;
+  widthMm: number;
+  heightMm: number;
+  type: SplitRegionType;
+  overflowTargetId?: string;
+  contentSourceId?: string;
+};
+
+export type SplitConfiguration = {
+  id?: string;
+  name: string;
+  layoutId: string;
+  fontId?: string;
+  fontSizeMm: number;
+  allowSplitText: boolean;
+  connectionText?: string;
+  imageData?: string;
+  imageOpacity: number;
+  regions: SplitRegion[];
+  contentSources: SplitContentSource[];
 };
